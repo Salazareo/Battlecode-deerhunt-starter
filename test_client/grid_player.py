@@ -36,17 +36,17 @@ def unitsInFOV(unit: Unit,  myUnits: Units, enemyUnits: Units):
     enemyWorkers = []
     for worker in myUnits.get_all_unit_of_type('worker'):
         dist = distance(unit.position(), worker.position())
-        if dist <= 4 and dist != 0:
+        if dist <= 5 and dist != 0:
             workers.append(worker)
     for warrior in myUnits.get_all_unit_of_type('melee'):
         dist = distance(unit.position(), warrior.position())
-        if dist <= 4:
+        if dist <= 5 and dist != 0:
             warriors.append(warrior)
     for evilWorker in enemyUnits.get_all_unit_of_type('worker'):
-        if distance(unit.position(), evilWorker.position()) <= 4:
+        if distance(unit.position(), evilWorker.position()) <= 5:
             enemyWorkers.append(evilWorker)
     for evilWarrior in enemyUnits.get_all_unit_of_type('melee'):
-        if distance(unit.position(), evilWarrior.position()) <= 4:
+        if distance(unit.position(), evilWarrior.position()) <= 5:
             enemyWarriors.append(evilWarrior)
     return workers, warriors, enemyWorkers, enemyWarriors
 
@@ -70,131 +70,155 @@ def closestUntapped(unit: Unit, resources: List, myUnits: Units, foodPaths: Dict
             return food
         elif (not isBusy) and offset:
             offset -= 1
-    return sortedFood[0]
+    return sortedFood[random.randint(0, len(sortedFood)-1)]
 
 
 # WORKER STUFF
 class EvalFnsWorker:
     @staticmethod
     def up(map: Map, unit: Unit, myUnits: Units, enemyUnits: Units, resourceCount: int,
-           turnsLeft: int, resources: List, paths: Dict, foodPaths: Dict, bfs) -> int:
+           turnsLeft: int, resources: List, paths: Dict, foodPaths: Dict, alreadySpawning: int, ongoingGoal: Dict, bfs) -> int:
         nearbyWorkers, nearbyWarriors, nearbyEnemyWorkers, nearbyEnemyWarriors = unitsInFOV(
             unit, myUnits, enemyUnits)
-        if not len(nearbyEnemyWarriors):
-            closestMine = closestUntapped(
-                unit, resources, myUnits, foodPaths, bfs)
-            newPos = (unit.position()[0], unit.position()[1] - 1)
+        # if not len(nearbyEnemyWarriors):
+        closestMine = closestUntapped(
+            unit, resources, myUnits, foodPaths, bfs)
+        newPos = (unit.position()[0], unit.position()[1] - 1)
+        if unit.id in ongoingGoal:
+            myDist = bfs(ongoingGoal[unit.id], newPos)
             if not len(nearbyEnemyWorkers):
-                return bfs(closestMine, newPos)
+                return myDist
             else:
-                myDis = bfs(closestMine, newPos)
                 for enemy in nearbyEnemyWorkers:
-                    if myDis > bfs(enemy.position(), closestMine):
-                        return bfs(closestUntapped(unit, resources, myUnits, foodPaths, bfs, 1), newPos)
-                return myDis
-
+                    if myDist > bfs(enemy.position(), closestMine):
+                        ongoingGoal[unit.id] = closestUntapped(
+                            unit, resources, myUnits, foodPaths, bfs, 1)
+                        return bfs(ongoingGoal[unit.id], newPos)
+                return myDist
         else:
-            return 10005
+            myDist = bfs(closestMine, newPos)
+            ongoingGoal[unit.id] = closestMine
+            return myDist
+            # else:
+            #     return 10005
             # engage expectimax
 
     @staticmethod
     def down(map: Map, unit: Unit, myUnits: Units, enemyUnits: Units, resourceCount: int,
-             turnsLeft: int, resources: List, paths: Dict, foodPaths: Dict, bfs) -> int:
+             turnsLeft: int, resources: List, paths: Dict, foodPaths: Dict, alreadySpawning: int, ongoingGoal: Dict, bfs) -> int:
         nearbyWorkers, nearbyWarriors, nearbyEnemyWorkers, nearbyEnemyWarriors = unitsInFOV(
             unit, myUnits, enemyUnits)
-        if not len(nearbyEnemyWarriors):
-            closestMine = closestUntapped(
-                unit, resources, myUnits, foodPaths, bfs)
-            newPos = (unit.position()[0], unit.position()[1] + 1)
+        # if not len(nearbyEnemyWarriors):
+        closestMine = closestUntapped(
+            unit, resources, myUnits, foodPaths, bfs)
+        newPos = (unit.position()[0], unit.position()[1] + 1)
+        if unit.id in ongoingGoal:
+            myDist = bfs(ongoingGoal[unit.id], newPos)
             if not len(nearbyEnemyWorkers):
-                return bfs(closestMine, newPos)
+                return myDist
             else:
-                myDis = bfs(closestMine, newPos)
                 for enemy in nearbyEnemyWorkers:
-                    if myDis > bfs(enemy.position(), closestMine):
-                        return bfs(closestUntapped(unit, resources, myUnits, foodPaths, bfs, 1), newPos)
-                return myDis
-
+                    if myDist > bfs(enemy.position(), closestMine):
+                        ongoingGoal[unit.id] = closestUntapped(
+                            unit, resources, myUnits, foodPaths, bfs, 1)
+                        return bfs(ongoingGoal[unit.id], newPos)
+                return myDist
         else:
-            return 10004
+            myDist = bfs(closestMine, newPos)
+            ongoingGoal[unit.id] = closestMine
+            return myDist
+        # else:
+        #     return 10004
             # engage expectimax
 
     @staticmethod
     def right(map: Map, unit: Unit, myUnits: Units, enemyUnits: Units, resourceCount: int,
-              turnsLeft: int, resources: List, paths: Dict, foodPaths: Dict, bfs) -> int:
+              turnsLeft: int, resources: List, paths: Dict, foodPaths: Dict, alreadySpawning: int, ongoingGoal: Dict, bfs) -> int:
         nearbyWorkers, nearbyWarriors, nearbyEnemyWorkers, nearbyEnemyWarriors = unitsInFOV(
             unit, myUnits, enemyUnits)
-        if not len(nearbyEnemyWarriors):
-            closestMine = closestUntapped(
-                unit, resources, myUnits, foodPaths, bfs)
-            newPos = (unit.position()[0]+1, unit.position()[1])
+        # if not len(nearbyEnemyWarriors):
+        closestMine = closestUntapped(
+            unit, resources, myUnits, foodPaths, bfs)
+        newPos = (unit.position()[0]+1, unit.position()[1])
+        if unit.id in ongoingGoal:
+            myDist = bfs(ongoingGoal[unit.id], newPos)
             if not len(nearbyEnemyWorkers):
-                return bfs(closestMine, newPos)
+                return myDist
             else:
-                myDis = bfs(closestMine, newPos)
                 for enemy in nearbyEnemyWorkers:
-                    if myDis > bfs(enemy.position(), closestMine):
-                        return bfs(closestUntapped(unit, resources, myUnits, foodPaths, bfs, 1), newPos)
-                return myDis
-
+                    if myDist > bfs(enemy.position(), closestMine):
+                        ongoingGoal[unit.id] = closestUntapped(
+                            unit, resources, myUnits, foodPaths, bfs, 1)
+                        return bfs(ongoingGoal[unit.id], newPos)
+                return myDist
         else:
-            return 10006
+            myDist = bfs(closestMine, newPos)
+            ongoingGoal[unit.id] = closestMine
+            return myDist
+        # else:
+        #     return 10006
             # engage expectimax
 
     @staticmethod
     def left(map: Map, unit: Unit, myUnits: Units, enemyUnits: Units, resourceCount: int,
-             turnsLeft: int, resources: List, paths: Dict, foodPaths: Dict, bfs) -> int:
+             turnsLeft: int, resources: List, paths: Dict, foodPaths: Dict, alreadySpawning: int,  ongoingGoal: Dict, bfs) -> int:
         nearbyWorkers, nearbyWarriors, nearbyEnemyWorkers, nearbyEnemyWarriors = unitsInFOV(
             unit, myUnits, enemyUnits)
-        if not len(nearbyEnemyWarriors):
-            closestMine = closestUntapped(
-                unit, resources, myUnits, foodPaths, bfs)
-            newPos = (unit.position()[0]-1, unit.position()[1])
+        # if not len(nearbyEnemyWarriors):
+        closestMine = closestUntapped(
+            unit, resources, myUnits, foodPaths, bfs)
+        newPos = (unit.position()[0]-1, unit.position()[1])
+        if unit.id in ongoingGoal:
+            myDist = bfs(ongoingGoal[unit.id], newPos)
             if not len(nearbyEnemyWorkers):
-                return bfs(closestMine, newPos)
+                return myDist
             else:
-                myDis = bfs(closestMine, newPos)
                 for enemy in nearbyEnemyWorkers:
-                    if myDis > bfs(enemy.position(), closestMine):
-                        return bfs(closestUntapped(unit, resources, myUnits, foodPaths, bfs, 1), newPos)
-                return myDis
+                    if myDist > bfs(enemy.position(), closestMine):
+                        ongoingGoal[unit.id] = closestUntapped(
+                            unit, resources, myUnits, foodPaths, bfs, 1)
+                        return bfs(ongoingGoal[unit.id], newPos)
+                return myDist
         else:
-            return 10001
+            myDist = bfs(closestMine, newPos)
+            ongoingGoal[unit.id] = closestMine
+            return myDist
+        # else:
+            # return 10001
             # engage expectimax
 
     @staticmethod
     def mine(map: Map, unit: Unit, myUnits: Units, enemyUnits: Units, resourceCount: int,
-             turnsLeft: int, resources: List, paths: Dict, foodPaths: Dict, bfs) -> int:
-        nearbyWorkers, nearbyWarriors, nearbyEnemyWorkers, nearbyEnemyWarriors = unitsInFOV(
-            unit, myUnits, enemyUnits)
-        if not len(nearbyEnemyWarriors):
-            return -35
-        else:
-            return 10002
-            # engage expectimax
+             turnsLeft: int, resources: List, paths: Dict, foodPaths: Dict, alreadySpawning: int, ongoingGoal: Dict, bfs) -> int:
+        del ongoingGoal[unit.id]
+        return -35 + random.randint(-1, 1)
 
     @staticmethod
     def breedWorker(map: Map, unit: Unit, myUnits: Units, enemyUnits: Units, resourceCount: int,
-                    turnsLeft: int, resources: List, paths: Dict, foodPaths: Dict, bfs) -> int:
+                    turnsLeft: int, resources: List, paths: Dict, foodPaths: Dict, alreadySpawning: int, ongoingGoal: Dict, bfs) -> int:
+        if unit.id in ongoingGoal:
+            return 100
         nearbyWorkers, nearbyWarriors, nearbyEnemyWorkers, nearbyEnemyWarriors = unitsInFOV(
             unit, myUnits, enemyUnits)
         if not len(nearbyEnemyWarriors):
-            if len(myUnits.get_all_unit_of_type('worker')) > len(myUnits.get_all_unit_of_type('melee')):
+            if len(myUnits.get_all_unit_of_type('worker')) > len(myUnits.get_all_unit_of_type('melee'))+2 and resourceCount-50 <= 20 and alreadySpawning > 2:
                 return 1000
-            return -50
+            return -35 + random.randint(-1, 1)
         else:
             return 10003
             # engage expectimax
 
     @staticmethod
     def breedWarrior(map: Map, unit: Unit, myUnits: Units, enemyUnits: Units, resourceCount: int,
-                     turnsLeft: int, resources: List, paths: Dict, foodPaths: Dict, bfs) -> int:
+                     turnsLeft: int, resources: List, paths: Dict, foodPaths: Dict, alreadySpawning: int, ongoingGoal: Dict, bfs) -> int:
+        if unit.id in ongoingGoal:
+            return 100
         nearbyWorkers, nearbyWarriors, nearbyEnemyWorkers, nearbyEnemyWarriors = unitsInFOV(
             unit, myUnits, enemyUnits)
         if not len(nearbyEnemyWarriors):
-            if len(myUnits.get_all_unit_of_type('worker')) < len(myUnits.get_all_unit_of_type('melee')):
+            if len(myUnits.get_all_unit_of_type('worker')) <= len(myUnits.get_all_unit_of_type('melee'))-2 and resourceCount-100 <= 40 and alreadySpawning > 2:
                 return 1000
-            return -100
+            return -35 + random.randint(-1, 1)
         else:
             return 10004
             # engage expectimax
@@ -232,7 +256,7 @@ class EvalFnsWarrior:
         if not (len(nearbyEnemyWarriors) + len(nearbyEnemyWorkers)):
             if unit.id in ongoingGoal:
                 myDist = bfs(ongoingGoal[unit.id], newPos)
-                if myDist < 4:
+                if myDist < 4 or myDist > 100:
                     del ongoingGoal[unit.id]
                     return 100
                 else:
@@ -259,7 +283,7 @@ class EvalFnsWarrior:
         if not (len(nearbyEnemyWarriors) + len(nearbyEnemyWorkers)):
             if unit.id in ongoingGoal:
                 myDist = bfs(ongoingGoal[unit.id], newPos)
-                if myDist < 4:
+                if myDist < 4 or myDist > 100:
                     del ongoingGoal[unit.id]
                     return 100
                 else:
@@ -286,7 +310,7 @@ class EvalFnsWarrior:
         if not (len(nearbyEnemyWarriors) + len(nearbyEnemyWorkers)):
             if unit.id in ongoingGoal:
                 myDist = bfs(ongoingGoal[unit.id], newPos)
-                if myDist < 4:
+                if myDist < 4 or myDist > 100:
                     del ongoingGoal[unit.id]
                     return 100
                 else:
@@ -313,7 +337,7 @@ class EvalFnsWarrior:
         if not (len(nearbyEnemyWarriors) + len(nearbyEnemyWorkers)):
             if unit.id in ongoingGoal:
                 myDist = bfs(ongoingGoal[unit.id], newPos)
-                if myDist < 4:
+                if myDist < 4 or myDist > 100:
                     del ongoingGoal[unit.id]
                     return 100
                 else:
@@ -341,7 +365,7 @@ class EvalFnsWarrior:
     def stun(map: Map, unit: Unit, myUnits: Units, enemyUnits: Units, resourceCount: int,
              turnsLeft: int, resources: List, paths: Dict, foodPaths: Dict, ongoingGoal: Dict, bfs) -> int:
         # dont see where stunning is useful yet
-        return 20
+        return 50
 
 
 actionToMoveWarrior = {
@@ -369,6 +393,7 @@ class GridPlayer:
         self.pathWeights = {}
         self.resources = []
         self.pathingMem = {}
+        self.alreadySpawning = 0
 
     def validMoves(self, unit: Unit, map: Map, resources: int, enemies: Units) -> List:
         validActions = []
@@ -392,10 +417,19 @@ class GridPlayer:
     def tick(self, game_map: Map, your_units: Units, enemy_units: Units,
              resources: int, turns_left: int) -> [Move]:
         # init calls
+        def hasBlock(pos):
+            for id in your_units.get_all_unit_ids():
+                if your_units.get_unit(id).position() == pos:
+                    return True
+            for id in enemy_units.get_all_unit_ids():
+                if enemy_units.get_unit(id).position() == pos:
+                    return True
+            return False
+
         def bfsDistance(p1, p2):
-            if (p1, p2) in self.pathWeights:
+            if (p1, p2) in self.pathWeights and not hasBlock(p1):
                 return self.pathWeights[(p1, p2)]
-            elif (p2, p1) in self.pathWeights:
+            elif (p2, p1) in self.pathWeights and not hasBlock(p2):
                 return self.pathWeights[(p2, p1)]
             else:
                 path = game_map.bfs(p1, p2)
@@ -413,7 +447,8 @@ class GridPlayer:
             moveValues = []
             for action in self.validMoves(worker, game_map, resources, enemy_units):
                 moveValues.append((evalFnsWorker[action](
-                    game_map, worker, your_units, enemy_units, resources, turns_left, self.resources, self.pathWeights, self.foodPaths, bfsDistance),
+                    game_map, worker, your_units, enemy_units, resources, turns_left, self.resources,
+                    self.pathWeights, self.foodPaths, self.alreadySpawning, self.pathingMem, bfsDistance),
                     actionToMove[action](worker)))
             moves.append(
                 sorted(moveValues, key=lambda x: x[0], reverse=True).pop()[1])
